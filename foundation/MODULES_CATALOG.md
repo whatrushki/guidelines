@@ -56,8 +56,8 @@
    *  `app.what.foundation:foundation-scraper` (легковесный мультиплатформенный движок Ksoup)
 
 5. **Иконки:**
-   * ❌ `androidx.compose.material.icons.Icons.Default.*`
-   *  `app.what.foundation.ui.icons.WHATIcons.*`
+   * ❌ Случайные сторонние иконки (FontAwesome, Feather, кастомные несогласованные SVG)
+   *  `Material Icons` для стандартных UI-действий + `WHATIcons.*` для доменных сущностей (университеты, новости, APK, логи)
 
 <br />
 

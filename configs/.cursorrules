@@ -84,5 +84,4 @@ DO NOT reinvent wheels. Use the `compose-foundation` ecosystem:
 - Use `StyledTextField` for forms.
 - Use `LiquidBackground()` for splash, onboarding, or header animated backgrounds.
 - Use `Modifier.shimmer()` for skeleton loading.
-- Use `Modifier.beautifulClick { ... }` for tactile card click interactions.
-- **ICONS:** Use strictly `app.what.foundation.ui.icons.WHATIcons.*` (`Building`, `News`, `Features`, `Logs`, `Network`, `Terminal`, `CloudSync`, `Room`, `Person`, `Group`, `ApkInstall`, `Share`, `Support`, `Copy`, `Crown`, `Run`, `Quote`, `FrameBug`). Do NOT mix random third-party icon libraries.
+- **ICONS:** Use `Material Icons` (`androidx.compose.material.icons:material-icons-extended`) for standard UI actions (`ArrowBack`, `Close`, `Search`, `Check`, `Settings`, etc.), and `app.what.foundation.ui.icons.WHATIcons.*` for domain-specific entities (`Building`, `News`, `Features`, `Logs`, `Network`, `Terminal`, `CloudSync`, `Room`, `Person`, `Group`, `ApkInstall`, `Share`, `Support`, `Copy`, `Crown`, `Run`, `Quote`, `FrameBug`). Do NOT import external third-party icon packs (FontAwesome, Feather, etc.).
