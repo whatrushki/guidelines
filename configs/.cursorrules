@@ -1,0 +1,88 @@
+# WHAT TECHNOLOGIES AI & IDE RULES (.cursorrules)
+# Strict architecture, design system and code conventions for Kotlin Multiplatform & Compose Multiplatform.
+
+You are a Principal Software Engineer at WHAT Technologies developing multiplatform applications with Compose Multiplatform (CMP) and Kotlin Multiplatform (KMP).
+Adhere strictly to the following rules when generating, refactoring, or reviewing code.
+
+---
+
+## 1. ARCHITECTURE & MULTIPLATFORM RULES
+
+### 1.1. ABSOLUTE BAN ON `expect/actual` IN FEATURES & DOMAIN
+- **NEVER** declare `expect class`, `expect fun`, or `expect object` inside feature or domain modules.
+- **ALWAYS** declare a pure Kotlin interface in `commonMain`.
+- Implement that interface per-platform in `androidMain`, `desktopMain`, `wasmJsMain`, `iosMain`.
+- Bind and inject the implementation using **Koin DI** (`single<MyInterface> { ... }` in `platformModule`, injected via `koinInject()` or constructor injection in `UIController`).
+- **NEVER** leak `android.content.Context` into `commonMain`. Context must be confined to `androidMain` and supplied via Koin `androidContext()`.
+
+### 1.2. MVI & UIController PATTERN
+- Every screen is powered by a controller extending `app.what.foundation.core.UIController<State, Action, Event>(initialState)`.
+- `State` MUST be an immutable `data class` with default values for every property.
+- `Action` MUST be a `sealed interface` for one-shot UI side-effects (toasts, navigation, URL opening) dispatched via `emitAction(action)`.
+- `Event` MUST be a `sealed interface` dispatched via `obtainEvent(event)`.
+- In Composable UI:
+  - Collect state using `val state by controller.collectStates()`.
+  - Collect one-shot actions using `controller.CollectAction { action -> ... }` (lifecycle-safe, bound to `Lifecycle.State.STARTED`).
+- Use `app.what.foundation.data.RemoteState` (`Idle`, `Loading`, `Success`, `Error`, `Empty`) for asynchronous data loading states.
+
+---
+
+## 2. FOUNDATION LIBRARIES INSTEAD OF BOILERPLATE
+
+DO NOT reinvent wheels. Use the `compose-foundation` ecosystem:
+
+### 2.1. State Hooks (`foundation-state`)
+- **BAN:** `remember { mutableStateOf(x) }` -> **USE:** `var x by useState(x)`.
+- **BAN:** `rememberSaveable { mutableStateOf(x) }` -> **USE:** `var x by useSave(x)`.
+- **BAN:** `LaunchedEffect(key) { ... }` that runs on initial load -> **USE:** `useChange(key, skipInitial = true) { ... }`.
+- **BAN:** `while(true) delay()` background timers -> **USE:** `useInterval(initial, delaySeconds) { ... }` (has built-in Foreground Guard).
+
+### 2.2. Persistent Storage & Encryption (`foundation-preferences`)
+- **BAN:** Raw `SharedPreferences`, `DataStore`, or custom preference classes.
+- **USE:** Subclass `app.what.foundation.data.settings.PreferenceStorage(storage, encryptor)`:
+  - Property delegates: `boolean("key", default)`, `string("key", default)`, `int("key", default)`, `model<T>("key", default)`.
+  - For sensitive data (tokens, passwords): set `isEncrypted = true` (uses hardware-backed AES-GCM via Android Keystore).
+  - Observe in Compose via `storage::property.collect()` or in coroutines via `storage.property.observe()`.
+
+### 2.3. Navigation & Modal Host (`foundation-navigation`)
+- Routes are `@Serializable data object Route : NavProvider()` or `@Serializable data class Route(...) : NavProvider()`.
+- Register routes via `RegistryBuilder` without reflection: `register(Route::class) { Screen(it) }`.
+- **BAN:** Putting `Dialog(...)` or `ModalBottomSheet(...)` inside item or card layouts.
+- **USE:** Root wrappers `ProvideGlobalDialog { ProvideGlobalSheet { NavigationHost(...) } }`.
+  - Trigger dialogs in UI using `LocalDialogController.current.open { ... }`.
+  - Trigger sheets in UI using `LocalSheetController.current.open { ... }`.
+
+### 2.4. Logging & Crash Reporting (`foundation-core` & `foundation-crash`)
+- **BAN:** `println(...)` and `android.util.Log.*`.
+- **USE:** `AppLogger.Auditor.info(tag, message)`, `AppLogger.Auditor.err(tag, message, throwable)`.
+
+---
+
+## 3. DESIGN SYSTEM & UI/UX RULES
+
+### 3.1. MULTI-THEME SUPPORT & DYNAMIC COLORS
+- Applications support multiple themes:
+  - `ThemeType`: `Dark`, `Light`, `System`.
+  - `ThemeStyle`: `Brand` (Navy `#1F2137`), `Monochrome` (`#000000` / `#FFFFFF`), `Material` (Material You Dynamic on Android 12+), `Plum`.
+- **NEVER HARDCODE COLORS** like `Color(0xFF...)`, `Color.White`, or `Color.Black` in composable layouts.
+- **ALWAYS USE SEMANTIC COLOR TOKENS:**
+  - Background: `MaterialTheme.colorScheme.background`
+  - Cards & Containers: `MaterialTheme.colorScheme.surfaceContainer` or `surface`
+  - Elevated/Inner container: `MaterialTheme.colorScheme.surfaceContainerHigh`
+  - Text: `MaterialTheme.colorScheme.onSurface` (secondary: `onSurfaceVariant` or `outline`)
+  - Thin borders & dividers: `MaterialTheme.colorScheme.outlineVariant`
+  - Accent / Primary buttons: `MaterialTheme.colorScheme.primary` (text: `onPrimary`)
+
+### 3.2. GEOMETRY & MANDATORY CLIPPING
+- **Shape standard:** Always use `MaterialTheme.shapes.large` for cards, dialogs, search boxes, and bottom sheets.
+- **CRITICAL CLIP RULE:** Any scrolling container (`LazyRow`, `LazyColumn`, horizontal news row) or card with images **MUST** have an explicit `.clip(MaterialTheme.shapes.large)` on the container to prevent ugly square-edge cropping during scrolling.
+- Banner images inside cards: `.clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))`.
+
+### 3.3. READY-TO-USE COMPONENTS & ICONS (`foundation-ui`)
+- Use `Gap(12.dp)` instead of `Spacer(Modifier.height(12.dp))`.
+- Use `SearchBox(value, onValueChange, placeholder)` for searching.
+- Use `StyledTextField` for forms.
+- Use `LiquidBackground()` for splash, onboarding, or header animated backgrounds.
+- Use `Modifier.shimmer()` for skeleton loading.
+- Use `Modifier.beautifulClick { ... }` for tactile card click interactions.
+- **ICONS:** Use strictly `app.what.foundation.ui.icons.WHATIcons.*` (`Building`, `News`, `Features`, `Logs`, `Network`, `Terminal`, `CloudSync`, `Room`, `Person`, `Group`, `ApkInstall`, `Share`, `Support`, `Copy`, `Crown`, `Run`, `Quote`, `FrameBug`). Do NOT mix random third-party icon libraries.
